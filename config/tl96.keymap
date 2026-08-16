@@ -133,12 +133,15 @@
     combos {
         compatible = "zmk,combos";
 
-        /* KP_N0(85) + KP_DOT(86) → 解锁 */
+        /* KP_N0(85) + KP_DOT(86) → 解锁
+         * 用自定义行为 &bvbhu 2 替代宏：ZMK combo→宏 会在 combo 释放时
+         * 卡死系统 workqueue（issue #2356/#3100），自定义行为经 ck_timer
+         * 异步分步执行，规避该问题 */
 
         combo_unlock: combo_unlock {
             timeout-ms = <50>;
             key-positions = <85 86>;
-            bindings = <&macro_unlock>;
+            bindings = <&bvbhu 2>;
             layers = <0>;
         };
 
@@ -147,7 +150,7 @@
         combo_lock: combo_lock {
             timeout-ms = <50>;
             key-positions = <70 71 72>;
-            bindings = <&macro_lock>;
+            bindings = <&bvbhu 3>;
             layers = <0>;
         };
 

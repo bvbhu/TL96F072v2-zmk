@@ -37,30 +37,22 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
-#	ifdef LEAD_TIMEOUT_MS
 static void lead_callback(struct behavior_bvbhu_data* data, void* context);
-#	endif
-#	ifdef RSPC_TIMEOUT_MS
 static void rightspace_callback(struct behavior_bvbhu_data* data, void* context);
-#	endif
-#	ifdef PROJ_RELEASE_DELAY_MS
 static void proj_callback(struct behavior_bvbhu_data* data, void* context);
-#	endif
+static void seq_callback(struct behavior_bvbhu_data* data, void* context);
 
 static void ck_schedule(struct behavior_bvbhu_data* data, uint32_t ms, ck_callback_t cb, void* ctx);
 static void ck_cancel(struct behavior_bvbhu_data* data);
 static void ck_trigger(struct behavior_bvbhu_data* data);
 static void ck_timer_handler(struct k_work* work);
 
-#	ifdef LEAD_TIMEOUT_MS
 static uint32_t macro_to_keycode(const char* dev_name);
 static char keycode_to_char(uint32_t keycode);
 static void send_string(const char* str, int64_t now);
-#	endif
 static void tap_keycode(uint32_t usage, int64_t timestamp);
 
 /* Lead 序列 */
-#	ifdef LEAD_TIMEOUT_MS
 static const struct
 {
 	const char* input;	/* 输入匹配前缀 */
@@ -68,7 +60,16 @@ static const struct
 } lead_entries[] = {
 	{ "158", (const char*)val },
 };
-#	endif
+
+/* ===== 序列执行器数据（combo 触发，替代 zmk,behavior-macro） =====
+ * combo_unlock/combo_lock 绑定 zmk 宏会在 combo 释放时卡死系统 workqueue
+ * （ZMK issue #2356/#3100 已知问题域），改用本自定义行为分步异步执行。
+ * seq_delays[i] = tap 完 codes[i] 后到 tap codes[i+1] 的延迟（毫秒）。 */
+static const uint32_t seq_unlock_codes[] = { KC_SPC, KC_1, KC_3, KC_2, KC_4, KC_4, KC_5 };
+static const uint16_t seq_unlock_delays[] = { 300, 30, 30, 30, 30, 30 };
+
+static const uint32_t seq_lock_codes[] = { KC_LGUI(KC_X), KC_U, KC_S };
+static const uint16_t seq_lock_delays[] = { 50, 50 };
 
 static const struct device* bvbhu_dev;
 /* ========== 初始化 ========== */
@@ -99,14 +100,12 @@ int on_bvbhu_binding_pressed(struct zmk_behavior_binding* binding, struct zmk_be
 	switch(subtype)
 	{
 		case BV_LEAD:
-#	ifdef LEAD_TIMEOUT_MS
 			/* 激活 Lead 模式，重置序列计数 */
 			data->ck_tapped = CK_LEAD;
 			data->ck_count = 0;
 			data->lead_seq[0] = '\0';
 			data->ck_trigger_position = event.position;
 			/* Lead 指示灯已移除 */
-#	endif
 			break;
 		case BV_F13_RESET:
 		{
@@ -120,6 +119,24 @@ int on_bvbhu_binding_pressed(struct zmk_behavior_binding* binding, struct zmk_be
 				tap_keycode(KC_NLCK, now);
 			break;
 		}
+		case BV_UNLOCK:
+			/* 解锁：空格 + 300ms + 132445（替代 macro_unlock，规避宏+combo 卡死） */
+			ck_cancel(data);
+			data->seq_codes = seq_unlock_codes;
+			data->seq_delays = seq_unlock_delays;
+			data->seq_len = ARRAY_SIZE(seq_unlock_codes);
+			data->seq_index = 0;
+			ck_schedule(data, 0, seq_callback, NULL);
+			break;
+		case BV_LOCK:
+			/* 锁定：Win+X → U → S（替代 macro_lock，规避宏+combo 卡死） */
+			ck_cancel(data);
+			data->seq_codes = seq_lock_codes;
+			data->seq_delays = seq_lock_delays;
+			data->seq_len = ARRAY_SIZE(seq_lock_codes);
+			data->seq_index = 0;
+			ck_schedule(data, 0, seq_callback, NULL);
+			break;
 
 		default:
 			break;
@@ -168,7 +185,6 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 	 *    终止 Lead 的按键（非字符 &kp / 非 kp 行为）同样被拦截、不产生输出；
 	 *  - 释放事件一律放行（BUBBLE）：否则 combo 成员键的释放被吞，
 	 *    combo 在 ZMK combo 系统中永远 active，导致 pd/pu 后续无抬起事件 */
-#	ifdef LEAD_TIMEOUT_MS
 	if(data->ck_tapped == CK_LEAD)
 	{
 		if(!ev->state) /* 释放事件放行，交给 combo 系统与 keymap */
@@ -192,7 +208,6 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 		/* 按下事件一律拦截：字符键被记录进序列，终止键不产生输出 */
 		return ZMK_EV_EVENT_CAPTURED;
 	}
-#	endif
 	/* 中断检测 */
 	if(data->ck_tapped != CK_NONE && ev->position != data->ck_trigger_position)
 	{
@@ -201,7 +216,6 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 	}
 
 	/* RSPC 占位符拦截 → 自定义 RightSpace 逻辑 */
-#	ifdef RSPC_TIMEOUT_MS
 	if(behaviorcmp(binding->behavior_dev, bvbhu_right_space) == 0)
 	{
 		data->ck_pressed = ev->state;
@@ -223,10 +237,8 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 		}
 		return ZMK_EV_EVENT_CAPTURED;
 	}
-#	endif
 
 	/* 捕获 RGUI(KC_P) 实现 Win+P 投影功能 */
-#	ifdef PROJ_RELEASE_DELAY_MS
 	if(binding->param1 == KC_RGUI(KC_P))
 	{
 		int64_t now = k_uptime_get();
@@ -247,13 +259,33 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 		raise_zmk_keycode_state_changed_from_encoded(KC_P, ev->state, now);
 		return ZMK_EV_EVENT_CAPTURED;
 	}
-#	endif
 
 	return ZMK_EV_EVENT_BUBBLE;
 }
 
 ZMK_LISTENER(bvbhu_behavior, bvbhu_position_state_changed_listener);
 ZMK_SUBSCRIPTION(bvbhu_behavior, zmk_position_state_changed);
+
+/* ========== 序列执行器（combo 触发，替代 zmk,behavior-macro） ==========
+ * 由 ck_timer 逐拍驱动：每拍 tap 一个键码，按 seq_delays 延迟下一拍。
+ * 全部在系统 workqueue 上异步执行，不阻塞事件线程。 */
+static void seq_callback(struct behavior_bvbhu_data* data, void* context)
+{
+	(void)context;
+	if(data->seq_index >= data->seq_len)
+	{
+		data->seq_index = 0;
+		return;
+	}
+	int64_t now = k_uptime_get();
+	tap_keycode(data->seq_codes[data->seq_index], now);
+	data->seq_index++;
+	if(data->seq_index < data->seq_len)
+	{
+		/* seq_delays[i] = tap 完 codes[i] 后到 tap codes[i+1] 的延迟 */
+		ck_schedule(data, data->seq_delays[data->seq_index - 1], seq_callback, NULL);
+	}
+}
 
 /* ========== Lead 超时/终止回调 ==========
  *
@@ -262,7 +294,6 @@ ZMK_SUBSCRIPTION(bvbhu_behavior, zmk_position_state_changed);
  *   否则 fallthrough 处理已记录的序列
  * context == NULL: 由超时或中断触发，直接处理已记录的序列
  */
-#	ifdef LEAD_TIMEOUT_MS
 static void lead_callback(struct behavior_bvbhu_data* data, void* context)
 {
 	/* 取消之前的调度（对应 QMK ck_cancel_deferred） */
@@ -312,14 +343,12 @@ static void lead_callback(struct behavior_bvbhu_data* data, void* context)
 	}
 	send_string(data->lead_seq, now);
 }
-#	endif
 
 /* ========== RightSpace 回调 ==========
  *
  * 按下后延迟 250ms 触发，根据击键次数执行不同动作
  * 触发时未抬起（ck_pressed==true）则不执行动作
  */
-#	ifdef RSPC_TIMEOUT_MS
 static void rightspace_callback(struct behavior_bvbhu_data* data, void* context)
 {
 	(void)context;
@@ -351,16 +380,13 @@ static void rightspace_callback(struct behavior_bvbhu_data* data, void* context)
 			break;
 	}
 }
-#	endif
 
-#	ifdef PROJ_RELEASE_DELAY_MS
 static void proj_callback(struct behavior_bvbhu_data* data, void* context)
 {
 	(void)context;
 	data->ck_tapped = CK_NONE;
 	zmk_hid_unregister_mods(zmk_hid_get_explicit_mods() & (MOD_LGUI | MOD_RGUI));
 }
-#	endif
 
 /*  统一延迟队列  */
 static void ck_schedule(struct behavior_bvbhu_data* data, uint32_t ms, ck_callback_t cb, void* ctx)
@@ -391,7 +417,6 @@ static void ck_timer_handler(struct k_work* work)
 }
 
 /* macro_1~macro_0 → 主键区键码 */
-#	ifdef LEAD_TIMEOUT_MS
 static uint32_t macro_to_keycode(const char* dev_name)
 {
 	if(dev_name == NULL) return 0;
@@ -407,10 +432,8 @@ static uint32_t macro_to_keycode(const char* dev_name)
 	if(behaviorcmp(dev_name, macro_0) == 0) return KC_0;
 	return 0;
 }
-#	endif
 
 /* 键码转字符 */
-#	ifdef LEAD_TIMEOUT_MS
 static char keycode_to_char(uint32_t keycode)
 {
 	if(SELECT_MODS(keycode) != 0) return '\0'; /* 带修饰键无效 */
@@ -429,7 +452,6 @@ static char keycode_to_char(uint32_t keycode)
 		return '0';
 	return '\0';
 }
-#	endif
 
 /* 发送按键点击 */
 static void tap_keycode(uint32_t usage, int64_t timestamp)
@@ -443,7 +465,6 @@ static void tap_keycode(uint32_t usage, int64_t timestamp)
  * 无 null 终止保证，必须限制最大读取长度，否则越界读相邻内存
  * 会输出垃圾键（表现为"按下 b"）并可能 HardFault 卡死。
  * val[] = uint32_t[3] = 12 字节；lead_seq 最长 LEAD_SEQ_MAX=8，12 均覆盖。 */
-#	ifdef LEAD_TIMEOUT_MS
 #define LEAD_OUTPUT_MAX 12
 static void send_string(const char* str, int64_t now)
 {
@@ -474,6 +495,5 @@ static void send_string(const char* str, int64_t now)
 		}
 	}
 }
-#	endif
 
 #endif /* DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT) */

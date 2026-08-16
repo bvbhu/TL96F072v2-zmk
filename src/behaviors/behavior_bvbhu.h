@@ -16,7 +16,7 @@
 #include <zmk/behavior.h>
 #include <zmk/event_manager.h>
 
-/* 取消定义则不编译功能对应代码 */
+/* 功能参数：数值直接参与逻辑，不做条件编译（功能始终启用） */
 #define LEAD_TIMEOUT_MS 2000	   /* Lead 序列超时时间（毫秒） */
 #define RSPC_TIMEOUT_MS 250		   /* RightSpace 延迟时间（毫秒） */
 #define PROJ_RELEASE_DELAY_MS 2000 /* Win+P 释放 Win 键延迟（毫秒） */
@@ -26,7 +26,9 @@
 enum bvbhu_subtype
 {
 	BV_LEAD = 0,
-	BV_F13_RESET = 1
+	BV_F13_RESET = 1,
+	BV_UNLOCK = 2, /* combo_unlock：空格 + 300ms + 132445（替代 zmk 宏） */
+	BV_LOCK = 3	   /* combo_lock：Win+X → U → S（替代 zmk 宏） */
 };
 
 enum ck_state
@@ -51,13 +53,14 @@ struct behavior_bvbhu_data
 	bool ck_pressed;			  /* 触发键是否仍按下 */
 	uint32_t ck_trigger_position; /* 触发键位置（用于中断判断） */
 
-#ifdef LEAD_TIMEOUT_MS
 	/* Lead 序列缓存（字符串形式，null 结尾） */
-#	ifndef LEAD_SEQ_MAX
-#		define LEAD_SEQ_MAX 7
-#	endif
 	char lead_seq[LEAD_SEQ_MAX + 1];
-#endif
+
+	/* 序列执行器（combo 触发，替代 zmk,behavior-macro，规避宏+combo 卡死） */
+	const uint32_t* seq_codes;	/* 当前序列键码数组 */
+	const uint16_t* seq_delays; /* 每步之后的延迟（毫秒） */
+	uint8_t seq_len;			/* 序列长度 */
+	uint8_t seq_index;			/* 当前执行索引 */
 
 	/* 统一延迟队列 */
 	struct k_work_delayable ck_timer;
@@ -133,6 +136,7 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh);
 #define KC_SCRL ZMK_HID_USAGE(HID_USAGE_KEY, HID_USAGE_KEY_KEYBOARD_SCROLL_LOCK)
 #define KC_NLCK ZMK_HID_USAGE(HID_USAGE_KEY, HID_USAGE_KEY_KEYPAD_NUM_LOCK_AND_CLEAR)
 
+#define KC_LGUI(k) ((k) | (MOD_LGUI << 24))
 #define KC_RGUI(k) ((k) | (MOD_RGUI << 24))
 #define KC_RCTRL(k) ((k) | (MOD_RCTL << 24))
 
