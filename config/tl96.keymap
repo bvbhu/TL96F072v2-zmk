@@ -100,27 +100,6 @@
             bindings = <&kp RS(RG(RIGHT))>;
         };
 
-        /* Mu: 解锁（空格+300ms延迟+132445） */
-
-        macro_unlock: macro_unlock {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings =
-                <&kp SPACE>,
-                <&macro_wait_time 300>,
-                <&kp N1 &kp N3 &kp N2 &kp N4 &kp N4 &kp N5>;
-        };
-
-        /* Ml: 休眠（Win+X → U → S，通过开始按钮右键菜单） */
-
-        macro_lock: macro_lock {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            wait-ms = <50>;
-            tap-ms = <5>;
-            bindings = <&kp LG(X) &kp U &kp S>;
-        };
-
         /* Mf13r: F13 复位（to0 后 bvbhu 1 处理指示灯） */
 
         macro_f13_reset: macro_f13_reset {
