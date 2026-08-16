@@ -46,7 +46,7 @@
 /** @brief RGB 独立 workqueue 栈大小（字节）
  *  定义 > 0 使用独立 workqueue（避免阻塞按键），值即线程栈大小。
  *  不定义或为 0 则使用系统 workqueue（省 RAM）。 */
-// #define RGB_WORKQ_STACK_SIZE 0 
+#define RGB_WORKQ_STACK_SIZE 1024
 
 /** @brief LED 坐标系中心点
  *  用于对称灯效（如 Cycle Left-Right）的中心参考坐标。

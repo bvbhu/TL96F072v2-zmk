@@ -167,8 +167,8 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 #	ifdef LEAD_TIMEOUT_MS
 	if(data->ck_tapped == CK_LEAD)
 	{
-		if(!ev->state) /* 不处理释放事件 */
-			return ZMK_EV_EVENT_CAPTURED;
+		if(!ev->state) /* 释放事件放行，交给 combo 系统与 keymap */
+			return ZMK_EV_EVENT_BUBBLE;
 		bool is_kp = (binding->behavior_dev != NULL && behaviorcmp(binding->behavior_dev, kp) == 0);
 		if(is_kp)
 		{
@@ -185,7 +185,11 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 			else
 				lead_callback(data, NULL);
 		}
-		return ZMK_EV_EVENT_CAPTURED;
+		/* 仍在 Lead：按下已被记录进序列，拦截；
+		 * 已终止（按到非字符键/非 kp 行为）：不拦截，放行该键正常触发 */
+		if(data->ck_tapped == CK_LEAD)
+			return ZMK_EV_EVENT_CAPTURED;
+		return ZMK_EV_EVENT_BUBBLE;
 	}
 #	endif
 	/* 中断检测 */
@@ -459,7 +463,8 @@ static void send_string(const char* str, int64_t now)
 		if(kc)
 		{
 			tap_keycode(kc, now);
-			k_sleep(K_MSEC(5));
+			/* 不在此处 k_sleep：send_string 可能被事件监听器/定时器回调
+			 * 同步调用，阻塞会冻结事件线程；HID 报告更新本身足够快 */
 		}
 	}
 }
