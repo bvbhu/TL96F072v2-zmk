@@ -1,0 +1,29 @@
+# Copyright (c) 2026 bvbhu
+# SPDX-License-Identifier: MIT
+
+description: BVBHU WS2812 GPIO bit-bang driver for STM32
+
+compatible: "bvbhu,ws2812-gpio-stm32"
+
+include: base.yaml
+
+properties:
+  chain-length:
+    type: int
+    required: true
+    description: Number of LEDs in the strip
+
+  gpios:
+    type: phandle-array
+    required: true
+    description: GPIO pin connected to the WS2812 data line
+
+  color-mapping:
+    type: array
+    required: true
+    description: Channel ordering (e.g. GRB)
+
+  reset-delay:
+    type: int
+    default: 50
+    description: Reset delay in microseconds

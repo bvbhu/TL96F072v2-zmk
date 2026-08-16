@@ -1,0 +1,10 @@
+# Copyright (c) 2026 bvbhu
+# SPDX-License-Identifier: MIT
+
+description: BVBHU Unified Custom Behavior
+
+compatible: "zmk,behavior-bvbhu"
+
+include: one_param.yaml
+
+properties: {}

@@ -1,0 +1,10 @@
+# Copyright (c) 2026 bvbhu
+# SPDX-License-Identifier: MIT
+
+config WS2812_GPIO_STM32
+    bool "WS2812 GPIO bit-bang driver for STM32"
+    select LED_STRIP
+    help
+      自定义 WS2812 GPIO bit-bang 驱动，适用于 STM32 系列。
+      Zephyr 4.1.0 内置的 ws2812_gpio 仅支持 NRF 系列，本驱动
+      使用 STM32 GPIO BSRR 寄存器实现时序控制。

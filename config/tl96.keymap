@@ -1,0 +1,242 @@
+/*
+ * Copyright (c) 2026 bvbhu
+ * SPDX-License-Identifier: MIT
+ *
+ * TL96 Keymap for bvbhu
+ */
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/rgb.h>
+#include "bvbhu.dtsi"
+
+/ {
+    macros {
+        /* M1: 输入 "bvbhu" */
+
+        macro_1: macro_1 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp B &kp V &kp B &kp H &kp U>;
+        };
+
+        /* M2: 输入 "2055" */
+
+        macro_2: macro_2 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp N2 &kp N0 &kp N5 &kp N5>;
+        };
+
+        /* M3: 输入 "132445" */
+
+        macro_3: macro_3 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp N1 &kp N3 &kp N2 &kp N4 &kp N4 &kp N5>;
+        };
+
+        /* M4: 上一曲 */
+
+        macro_4: macro_4 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp C_PREVIOUS>;
+        };
+
+        /* M5: 播放/暂停 */
+
+        macro_5: macro_5 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp C_PLAY_PAUSE>;
+        };
+
+        /* M6: 下一曲 */
+
+        macro_6: macro_6 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp C_NEXT>;
+        };
+
+        /* M7: Ctrl+Win+Left（虚拟桌面左移） */
+
+        macro_7: macro_7 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp RC(RG(LEFT))>;
+        };
+
+        /* M8: 输入 " - " */
+
+        macro_8: macro_8 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp SPACE &kp MINUS &kp SPACE>;
+        };
+
+        /* M9: Ctrl+Win+Right（虚拟桌面右移） */
+
+        macro_9: macro_9 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp RC(RG(RIGHT))>;
+        };
+
+        /* M0: Shift+Win+Left（窗口移至左显示器） */
+
+        macro_0: macro_0 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp RS(RG(LEFT))>;
+        };
+
+        /* Mdot: Shift+Win+Right（窗口移至右显示器） */
+
+        macro_dot: macro_dot {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp RS(RG(RIGHT))>;
+        };
+
+        /* Mu: 解锁（空格+300ms延迟+132445） */
+
+        macro_unlock: macro_unlock {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings =
+                <&kp SPACE>,
+                <&macro_wait_time 300>,
+                <&kp N1 &kp N3 &kp N2 &kp N4 &kp N4 &kp N5>;
+        };
+
+        /* Ml: 休眠（Win+X → U → S，通过开始按钮右键菜单） */
+
+        macro_lock: macro_lock {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <50>;
+            tap-ms = <5>;
+            bindings = <&kp LG(X) &kp U &kp S>;
+        };
+
+        /* Mf13r: F13 复位（to0 后 bvbhu 1 处理指示灯） */
+
+        macro_f13_reset: macro_f13_reset {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&to 0 &bvbhu 1>;
+        };
+    };
+
+    combos {
+        compatible = "zmk,combos";
+
+        /* KP_N0(85) + KP_DOT(86) → 解锁 */
+
+        combo_unlock: combo_unlock {
+            timeout-ms = <50>;
+            key-positions = <85 86>;
+            bindings = <&macro_unlock>;
+            layers = <0>;
+        };
+
+        /* KP_N1(70) + KP_N2(71) + KP_N3(72) → 锁定 */
+
+        combo_lock: combo_lock {
+            timeout-ms = <50>;
+            key-positions = <70 71 72>;
+            bindings = <&macro_lock>;
+            layers = <0>;
+        };
+
+        /* PGDN(22) + PGUP(23) + PSCR(24) → 激活 Lead */
+
+        combo_lead: combo_lead {
+            timeout-ms = <50>;
+            key-positions = <22 23 24>;
+            bindings = <&bvbhu 0>;
+            layers = <0 1 2>;
+        };
+    };
+
+    behaviors {
+        prtsc: prtsc {
+            compatible = "zmk,behavior-mod-morph";
+            bindings = <&kp RA(PSCRN)>, <&kp PRINTSCREEN>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LALT|MOD_RCTL)>;
+        };
+
+        paste: paste {
+            compatible = "zmk,behavior-mod-morph";
+            bindings = <&kp RC(V)>, <&kp V>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LGUI|MOD_RGUI)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI)>;
+        };
+
+        fn: fn {
+            compatible = "zmk,behavior-hold-tap";
+            bindings = <&to>, <&to>;
+
+            #binding-cells = <2>;
+            tapping-term-ms = <200>;
+        };
+
+        f13: f13 {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <500>;
+            bindings = <&macro_f13_reset>, <&kp LA(F4)>;
+        };
+
+        /* RSPC 占位符（macro 不订阅 position_state_changed，listener 中拦截为自定义逻辑） */
+
+        bvbhu_right_space: bvbhu_right_space {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&none>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+
+        default_layer {
+            bindings = <
+&kp ESC    &kp F1   &kp F2    &kp F3    &kp F4     &kp F5    &kp F6      &kp F7              &kp F8    &kp F9    &kp F10   &kp F11    &kp F12    &kp MINUS  &kp EQUAL  &f13
+&kp GRAVE  &kp N1   &kp N2    &kp N3    &kp N4     &kp N5    &kp PG_DN   &kp PG_UP           &prtsc    &kp DEL   &kp N6    &kp N7     &kp N8     &kp N9     &kp N0     &kp BSPC
+&kp TAB    &kp Q    &kp W     &kp E     &kp R      &kp T     &macro_7    &macro_8            &macro_9  &kp LBKT  &kp Y     &kp U      &kp I      &kp O      &kp P      &kp RBKT
+&kp CAPS   &kp A    &kp S     &kp D     &kp F      &kp G     &macro_4    &macro_5            &macro_6  &kp BSLH  &kp H     &kp J      &kp K      &kp L      &kp SEMI   &kp SQT
+&kp LSHFT  &kp Z    &kp X     &kp C     &kp V      &kp B     &macro_1    &macro_2            &macro_3  &kp B     &kp N     &kp M      &kp COMMA  &kp DOT    &kp FSLH   &kp RET
+&kp LCTRL  &fn 0 1  &kp LGUI  &kp LALT  &kp SPACE  &macro_0  &macro_dot  &bvbhu_right_space  &kp LEFT  &kp UP    &kp DOWN  &kp RIGHT
+            >;
+        };
+
+        shortcut_layer {
+            bindings = <
+&trans     &trans     &trans     &trans     &trans          &trans      &trans      &trans              &trans           &trans           &trans           &trans           &trans           &kp UNDER        &kp PLUS   &trans
+&kp TILDE  &kp EXCL   &kp AT     &kp HASH   &kp DLLR        &kp PRCNT   &trans      &trans              &trans           &trans           &kp CARET        &kp AMPS         &kp STAR         &kp LPAR         &kp RPAR   &trans
+&trans     &trans     &kp RC(W)  &trans     &kp SCROLLLOCK  &kp KP_NUM  &kp KP_N7   &kp KP_N8           &kp KP_N9        &kp LBRC         &rgb_ug RGB_ON   &rgb_ug RGB_SAI  &rgb_ug RGB_HUI  &rgb_ug RGB_SPI  &kp RG(P)  &kp RBRC
+&trans     &kp RC(A)  &kp RC(S)  &kp RC(D)  &kp RC(F)       &kp RC(G)   &kp KP_N4   &kp KP_N5           &kp KP_N6        &kp PIPE         &rgb_ug RGB_OFF  &rgb_ug RGB_SAD  &rgb_ug RGB_HUD  &rgb_ug RGB_SPD  &kp COLON  &kp DQT
+&trans     &kp RC(Z)  &kp RC(X)  &kp RC(C)  &paste          &kp RC(B)   &kp KP_N1   &kp KP_N2           &kp KP_N3        &kp RS(RC(B))    &rgb_ug RGB_TOG  &kp RC(M)        &kp LT           &kp GT           &kp QMARK  &trans
+&trans     &fn 0 2    &trans     &trans     &trans          &kp KP_N0   &kp KP_DOT  &bvbhu_right_space  &rgb_ug RGB_EFR  &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &rgb_ug RGB_EFF
+            >;
+        };
+
+        standard_layer {
+            bindings = <
+&kp ESC    &kp F1   &kp F2    &kp F3    &kp F4     &kp F5     &kp F6      &kp F7     &kp F8     &kp F9    &kp F10   &kp F11    &kp F12    &kp MINUS  &kp EQUAL  &trans
+&kp GRAVE  &kp N1   &kp N2    &kp N3    &kp N4     &kp N5     &kp PG_DN   &kp PG_UP  &kp PSCRN  &kp DEL   &kp N6    &kp N7     &kp N8     &kp N9     &kp N0     &kp BSPC
+&kp TAB    &kp Q    &kp W     &kp E     &kp R      &kp T      &kp KP_N7   &kp KP_N8  &kp KP_N9  &kp LBKT  &kp Y     &kp U      &kp I      &kp O      &kp P      &kp RBKT
+&kp CAPS   &kp A    &kp S     &kp D     &kp F      &kp G      &kp KP_N4   &kp KP_N5  &kp KP_N6  &kp BSLH  &kp H     &kp J      &kp K      &kp L      &kp SEMI   &kp APOS
+&kp LSHFT  &kp Z    &kp X     &kp C     &kp V      &kp B      &kp KP_N1   &kp KP_N2  &kp KP_N3  &kp B     &kp N     &kp M      &kp COMMA  &kp DOT    &kp FSLH   &kp ENTER
+&kp LCTRL  &fn 0 2  &kp LALT  &kp LGUI  &kp SPACE  &kp KP_N0  &kp KP_DOT  &kp SPACE  &kp LEFT   &kp UP    &kp DOWN  &kp RIGHT
+            >;
+        };
+    };
+};

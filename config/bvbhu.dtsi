@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2026 bvbhu
+ * SPDX-License-Identifier: MIT
+ *
+ * BVBHU 统一自定义行为实例
+ *
+ */
+
+/ {
+    behaviors {
+        bvbhu: bvbhu {
+            compatible = "zmk,behavior-bvbhu";
+            #binding-cells = <1>;
+        };
+    };
+};

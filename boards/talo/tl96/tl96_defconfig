@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 bvbhu
+
+# SoC 选择由 Kconfig.tl96 (select SOC_STM32F072XB) 和 Kconfig.defconfig 完成
+# 时钟频率由 DTS rcc 节点 clock-frequency 派生
+
+# 持久化存储（RGB Matrix 等配置需要）
+CONFIG_FLASH=y
+CONFIG_FLASH_MAP=y
+CONFIG_FLASH_PAGE_LAYOUT=y
+
+# STM32F072 仅 16KB SRAM，缩减内存占用
+CONFIG_MAIN_STACK_SIZE=640
+# ISR 栈默认 2048B，但 STM32F0 (Cortex-M0) 无硬件中断嵌套，
+# ZMK 中断处理链需求较小，缩小 ISR 栈释放 RAM 给线程栈留出余量，
+# 避免 16KB SRAM 满载时栈越界破坏内存导致 USB 枚举失败
+CONFIG_ISR_STACK_SIZE=1024
+CONFIG_MPU_ALLOW_FLASH_WRITE=y
+CONFIG_NVS=y
+
+# STM32 pinctrl driver
+CONFIG_PINCTRL=y
+
+# 禁用电源管理子系统，避免 STM32F0 上 "Undefined initialization levels used" 链接错误
+CONFIG_PM=n
+
+CONFIG_SETTINGS=y
+CONFIG_SETTINGS_NVS=y
+CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=640
+
+# 自定义 WS2812 GPIO STM32 驱动（Zephyr 4.1.0 内置驱动仅支持 NRF）
+CONFIG_WS2812_GPIO_STM32=y
+
+# 无外部电源控制器
+CONFIG_ZMK_EXT_POWER=n
+
+# HID 指示灯（Caps/Num/Scroll Lock 等状态检测）
+CONFIG_ZMK_HID_INDICATORS=y
+
+CONFIG_ZMK_HID_REPORT_TYPE_NKRO=y
+
+# 空闲超时（单位ms，0 表示不超时）
+CONFIG_ZMK_IDLE_TIMEOUT=0
+
+# KSCAN 轮询模式（STM32F0 EXTI 线有限，且 kscan_gpio_pin_get 读取原始物理电平，需用 GPIO_ACTIVE_HIGH 确保电平极性正确）
+CONFIG_ZMK_KSCAN_MATRIX_POLLING=y
+
+# USB HID
+CONFIG_ZMK_USB=y
+
+# RGB Underglow (WS2812, 96 LEDs, PB12)
+# 使用自定义 led_controller 统一管理灯效和指示灯，避免双写入者闪烁
+# CONFIG_ZMK_RGB_UNDERGLOW is not set

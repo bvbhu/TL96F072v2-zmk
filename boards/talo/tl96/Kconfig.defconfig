@@ -1,0 +1,24 @@
+# TL96 keyboard configuration
+# Copyright (c) 2026 bvbhu
+# SPDX-License-Identifier: MIT
+
+if BOARD_TL96
+
+# WS2812_GPIO_STM32 符号定义见项目根 Kconfig，启用见 tl96_defconfig
+
+config SOC
+    default "stm32f072xb"
+
+config SOC_FAMILY
+    default "st_stm32"
+
+config SOC_SERIES
+    default "stm32f0x"
+
+config ZMK_KEYBOARD_NAME
+    default "TL96"
+
+config ZMK_USB
+    default y
+
+endif # BOARD_TL96

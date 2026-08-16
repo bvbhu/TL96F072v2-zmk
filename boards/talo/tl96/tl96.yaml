@@ -1,0 +1,16 @@
+identifier: tl96
+name: TL96
+type: mcu
+arch: arm
+ram: 16
+toolchain:
+  - zephyr
+  - gnuarmemb
+supported:
+  - usb_device
+  - gpio
+  - i2c
+  - pinctrl
+  - counter
+  - spi
+  - kscan

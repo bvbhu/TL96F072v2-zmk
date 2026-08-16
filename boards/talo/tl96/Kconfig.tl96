@@ -1,0 +1,7 @@
+# TL96 keyboard configuration
+# Copyright (c) 2026 bvbhu
+# SPDX-License-Identifier: MIT
+
+config BOARD_TL96
+    bool "TL96"
+    select SOC_STM32F072XB

@@ -1,0 +1,7 @@
+board:
+  name: tl96
+  vendor: talo
+  socs:
+    - name: stm32f072xb
+      variants:
+        - name: zmk

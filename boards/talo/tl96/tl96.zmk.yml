@@ -1,0 +1,9 @@
+file_format: "1"
+id: talo/tl96
+name: TL96
+type: board
+arch: arm
+outputs:
+  - usb
+features:
+  - keys
