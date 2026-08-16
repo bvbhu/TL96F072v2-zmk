@@ -27,6 +27,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/led_strip.h>
 #include <zephyr/init.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
@@ -125,6 +126,12 @@ static uint32_t rgb_timer_buffer;
 static last_hit_t last_hit_buffer;
 #endif // RGB_MATRIX_KEYREACTIVE_ENABLED
 
+/* last_hit_buffer 由按键事件线程（rgb_matrix_handle_key_event）写入，
+ * 同时被 RGB workqueue 线程（rgb_task_timers/rgb_task_start）读改写，
+ * 必须互斥保护；否则 combo 多键同时按下时 memcpy 移位与 count 更新
+ * 交错，可能越界写破坏内存导致 HardFault 卡死 */
+static struct k_spinlock rgb_hit_lock;
+
 // split rgb matrix
 #if defined(RGB_MATRIX_SPLIT)
 const uint8_t k_rgb_matrix_split[2] = RGB_MATRIX_SPLIT;
@@ -186,6 +193,7 @@ void rgb_matrix_handle_key_event(uint8_t row, uint8_t column, bool pressed)
 #	ifdef RGB_MATRIX_KEYREACTIVE_ENABLED
 	uint8_t led[LED_HITS_TO_REMEMBER];
 	uint8_t led_count = 0;
+	k_spinlock_key_t lock_key = k_spin_lock(&rgb_hit_lock);
 #		if defined(RGB_MATRIX_KEYRELEASES)
 	if(!pressed)
 #		elif defined(RGB_MATRIX_KEYPRESSES)
@@ -211,6 +219,7 @@ void rgb_matrix_handle_key_event(uint8_t row, uint8_t column, bool pressed)
 		last_hit_buffer.tick[index] = 0;
 		last_hit_buffer.count++;
 	}
+	k_spin_unlock(&rgb_hit_lock, lock_key);
 #	endif // RGB_MATRIX_KEYREACTIVE_ENABLED
 #	if defined(RGB_MATRIX_FRAMEBUFFER_EFFECTS) && defined(ENABLE_RGB_MATRIX_TYPING_HEATMAP)
 #		if defined(RGB_MATRIX_KEYRELEASES)
@@ -326,6 +335,7 @@ static void rgb_task_timers(void)
 
 	// Update double buffer last hit timers
 #ifdef RGB_MATRIX_KEYREACTIVE_ENABLED
+	k_spinlock_key_t lock_key = k_spin_lock(&rgb_hit_lock);
 	uint8_t count = last_hit_buffer.count;
 	for(uint8_t i = 0; i < count; ++i)
 	{
@@ -336,6 +346,7 @@ static void rgb_task_timers(void)
 		}
 		last_hit_buffer.tick[i] += deltaTime;
 	}
+	k_spin_unlock(&rgb_hit_lock, lock_key);
 #endif // RGB_MATRIX_KEYREACTIVE_ENABLED
 }
 
@@ -353,7 +364,9 @@ static void rgb_task_start(void)
 	// update double buffers
 	g_rgb_timer = rgb_timer_buffer;
 #ifdef RGB_MATRIX_KEYREACTIVE_ENABLED
+	k_spinlock_key_t lock_key = k_spin_lock(&rgb_hit_lock);
 	g_last_hit_tracker = last_hit_buffer;
+	k_spin_unlock(&rgb_hit_lock, lock_key);
 #endif // RGB_MATRIX_KEYREACTIVE_ENABLED
 
 	// next task

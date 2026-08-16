@@ -163,7 +163,11 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 		zmk_keymap_get_layer_binding_at_idx(layer, ev->position);
 	if(binding == NULL) return ZMK_EV_EVENT_BUBBLE;
 
-	/* Lead 拦截 所有按键由 lead_callback 处理 */
+	/* Lead 拦截：
+	 *  - 按下事件一律拦截（CAPTURED）：字符键被消费记录进 lead_seq，
+	 *    终止 Lead 的按键（非字符 &kp / 非 kp 行为）同样被拦截、不产生输出；
+	 *  - 释放事件一律放行（BUBBLE）：否则 combo 成员键的释放被吞，
+	 *    combo 在 ZMK combo 系统中永远 active，导致 pd/pu 后续无抬起事件 */
 #	ifdef LEAD_TIMEOUT_MS
 	if(data->ck_tapped == CK_LEAD)
 	{
@@ -185,11 +189,8 @@ int bvbhu_position_state_changed_listener(const zmk_event_t* eh)
 			else
 				lead_callback(data, NULL);
 		}
-		/* 仍在 Lead：按下已被记录进序列，拦截；
-		 * 已终止（按到非字符键/非 kp 行为）：不拦截，放行该键正常触发 */
-		if(data->ck_tapped == CK_LEAD)
-			return ZMK_EV_EVENT_CAPTURED;
-		return ZMK_EV_EVENT_BUBBLE;
+		/* 按下事件一律拦截：字符键被记录进序列，终止键不产生输出 */
+		return ZMK_EV_EVENT_CAPTURED;
 	}
 #	endif
 	/* 中断检测 */
@@ -437,11 +438,16 @@ static void tap_keycode(uint32_t usage, int64_t timestamp)
 	raise_zmk_keycode_state_changed_from_encoded(usage, false, timestamp);
 }
 
-/* 发送字符串（主键盘键码，依次 tap） */
+/* 发送字符串（主键盘键码，依次 tap）
+ * 注意：lead_entries 的 output 可能是混淆编码的 uint32 数组（如 val[]），
+ * 无 null 终止保证，必须限制最大读取长度，否则越界读相邻内存
+ * 会输出垃圾键（表现为"按下 b"）并可能 HardFault 卡死。
+ * val[] = uint32_t[3] = 12 字节；lead_seq 最长 LEAD_SEQ_MAX=8，12 均覆盖。 */
 #	ifdef LEAD_TIMEOUT_MS
+#define LEAD_OUTPUT_MAX 12
 static void send_string(const char* str, int64_t now)
 {
-	for(const char* p = str; *p; p++)
+	for(const char* p = str; *p && (p - str) < LEAD_OUTPUT_MAX; p++)
 	{
 		uint32_t kc = 0;
 		if(*p >= 'a' && *p <= 'z')
