@@ -39,6 +39,10 @@ CONFIG_ZMK_HID_INDICATORS=y
 
 CONFIG_ZMK_HID_REPORT_TYPE_NKRO=y
 
+# RGB 设置持久化禁用（设为负值则完全跳过 Flash 写入）
+# 用于排查 Flash 擦写是否与 RGB 卡死有关；若禁用后卡死消失，则根因确认为 Flash
+CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE=-1
+
 # 空闲超时（单位ms，0 表示不超时）
 CONFIG_ZMK_IDLE_TIMEOUT=0
 
