@@ -42,5 +42,5 @@ CONFIG_ZMK_USB=y
 
 # ===== LED 驱动 =====
 # 使用自定义 led_controller 统一管理灯效和指示灯，避免双写入者闪烁
-CONFIG_WS2812_STRIP=y
+# 自定义 ws2812_gpio_stm32 驱动自带 Kconfig，无需 WS2812_STRIP
 # CONFIG_ZMK_RGB_UNDERGLOW is not set
