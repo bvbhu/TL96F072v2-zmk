@@ -11,7 +11,7 @@
 
 ### RGB Matrix
 
-使用自定义 RGB 控制器取代 ZMK 内置 `rgb_underglow`，复刻 QMK RGB Matrix。支持全部灯效，灯效/HSV/速度/开关状态自动保存至 flash，空闲可自动熄灯。详细说明请参见 [src/rgb_matrix/README.md](src/rgb_matrix/README.md)，移植参考请参见 [RGB Matrix移植参考.md](<RGB Matrix移植参考.md>)。
+使用自定义 RGB 控制器取代 ZMK 内置 `rgb_underglow`，复刻 QMK RGB Matrix。支持全部灯效，灯效/HSV/速度/开关状态自动保存至 flash，空闲可自动熄灯。RGB Matrix 实现由 `zmk-qmk-rgb-matrix` 模块提供，键盘仓仅需通过 Kconfig 和 `keymap.c` 配置参数与 LED 布局。移植参考请参见 [RGB Matrix移植参考.md](<RGB Matrix移植参考.md>)。
 
 ---
 

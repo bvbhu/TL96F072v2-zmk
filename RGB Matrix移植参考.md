@@ -84,7 +84,7 @@ chosen {
     zephyr,flash = &flash0;
     zephyr,settings-partition = &storage_partition;  /* 持久化必需 */
     zmk,kscan = &kscan0;
-    zmk,matrix_transform = &default_transform;       /* 反应式/帧缓冲灯效必需 */
+    zmk,matrix_transform = &default_transform;       /* Key Reactive / Framebuffer 灯效必需 */
     zmk,underglow = &led_strip;                     /* RGB Matrix 从该节点获取 LED 设备 */
 };
 ```
@@ -215,19 +215,19 @@ CONFIG_ZMK_IDLE_TIMEOUT=30000
 A: 在 `config.h` 中将源文件/头文件包裹在 `if ((NOT CONFIG_ZMK_SPLIT) OR CONFIG_ZMK_SPLIT_ROLE_CENTRAL)` 条件中（仅 central 端运行渲染），并定义 `RGB_MATRIX_SPLIT { 左半LED数, 右半LED数 }`。
 
 **Q: RAM 不足怎么办？**
-A: 减少启用的灯效数量（注释掉 `config.h` 中不必要的 `ENABLE_RGB_MATRIX_xxx`），尤其是反应式和帧缓冲灯效——它们会常驻分配约 178B BSS（详见下文「RAM 注意事项」一节）。可将 `g_led_config` 声明为 `const` 存入 flash。在 defconfig 中可以缩减 `MAIN_STACK_SIZE` 和 `SYSTEM_WORKQUEUE_STACK_SIZE`，但注意避免栈溢出导致内存损坏（HardFault）。
+A: 减少启用的灯效数量（注释掉 `config.h` 中不必要的 `ENABLE_RGB_MATRIX_xxx`），尤其是 Key Reactive 和 Framebuffer 灯效——它们会常驻分配约 178B BSS（详见下文「RAM 注意事项」一节）。可将 `g_led_config` 声明为 `const` 存入 flash。在 defconfig 中可以缩减 `MAIN_STACK_SIZE` 和 `SYSTEM_WORKQUEUE_STACK_SIZE`，但注意避免栈溢出导致内存损坏（HardFault）。
 
-**Q: 反应式/帧缓冲灯效不生效？**
+**Q: Key Reactive / Framebuffer 灯效不生效？**
 A: 检查板级 `.dts` 的 chosen 节点是否声明了 `zmk,matrix-transform`。position → (row, col) 映射表由该节点自动生成，缺失时相关灯效会被自动禁用。
 
 ## 10. RAM 注意事项
 
-反应式和帧缓冲灯效会常驻分配额外 BSS（与开机默认灯效无关）：
+Key Reactive 和 Framebuffer 灯效会常驻分配额外 BSS（与开机默认灯效无关）：
 
 | 灯效类型 | 触发宏                              | 常驻 BSS                                   | 大小 |
 | ---- | -------------------------------- | ---------------------------------------- | ------- |
-| 反应式  | `RGB_MATRIX_KEYREACTIVE_ENABLED` | `g_last_hit_tracker` + `last_hit_buffer` | ~82 B   |
-| 帧缓冲  | `RGB_MATRIX_FRAMEBUFFER_EFFECTS` | `g_rgb_frame_buffer[6][16]`              | 96 B    |
+| Key Reactive  | `RGB_MATRIX_KEYREACTIVE_ENABLED` | `g_last_hit_tracker` + `last_hit_buffer` | ~82 B   |
+| Framebuffer  | `RGB_MATRIX_FRAMEBUFFER_EFFECTS` | `g_rgb_frame_buffer[6][16]`              | 96 B    |
 | 合计   | <br />                           | <br />                                   | ~178 B  |
 
 在 SRAM 紧张的键盘上（如 STM32F072 16KB），启用这些灯效可能使 `.bss` 越界或工作队列栈溢出（HardFault），表现为刷入固件后键盘无法识别。缓解手段：
