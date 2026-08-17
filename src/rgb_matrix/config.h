@@ -77,6 +77,13 @@
  *  可选值: 1 ~ 255，UINT8_MAX = 255 */
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 225
 
+/** @brief 持久化保存防抖延迟（毫秒）
+ *  RGB 设置写入 Flash 的尾缘防抖时间，完全由 config.h 控制，
+ *  与 ZMK 全局 CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE 无关。
+ *  可选值: 0 = 立即写入；正值 = 停止按键后延迟此时间写一次；负值 = 禁用持久化。
+ *  默认 5000 毫秒（5 秒） */
+#define RGB_MATRIX_SETTINGS_SAVE_DEBOUNCE 5000
+
 /** @brief 默认 LED 标志
  *  控制灯效默认应用于哪些类型的 LED。
  *  可选值（可组合）:

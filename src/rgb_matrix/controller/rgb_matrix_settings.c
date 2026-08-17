@@ -48,16 +48,18 @@ static void rgb_matrix_save_handler(struct k_work* work)
 	}
 }
 
-/* 防抖保存：CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE < 0 时禁用持久化，不启动调度。
- * 正数值使用尾缘防抖（k_work_reschedule 取消上一个待写入），
- * 确保只有用户停止按键后经过完整防抖时间才写一次 Flash。 */
+/* 防抖保存：RGB_MATRIX_SETTINGS_SAVE_DEBOUNCE 定义于 config.h，
+ *  与 ZMK 全局 CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE 无关。
+ *  - 负值：禁用持久化，不启动调度，不写 Flash
+ *  - 0：立即写入
+ *  - 正值：尾缘防抖，停止按键后经过此时间才写一次 Flash */
 void rgb_matrix_settings_save(void)
 {
-	if(CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE < 0)
+	if(RGB_MATRIX_SETTINGS_SAVE_DEBOUNCE < 0)
 	{
 		return;
 	}
-	k_work_reschedule(&rgb_matrix_save_work, K_MSEC(CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE));
+	k_work_reschedule(&rgb_matrix_save_work, K_MSEC(RGB_MATRIX_SETTINGS_SAVE_DEBOUNCE));
 }
 
 static int rgb_matrix_settings_set(const char* name, size_t len, settings_read_cb read_cb, void* cb_arg)
