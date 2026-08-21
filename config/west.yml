@@ -4,14 +4,14 @@ manifest:
   remotes:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
-    - name: mykeyboard
+    - name: bvbhu-zmk-qmk-rgb-matrix
       url-base: https://github.com/bvbhu
   projects:
     - name: zmk
       remote: zmkfirmware
       import: app/west.yml
     - name: zmk-qmk-rgb-matrix
-      remote: mykeyboard
+      remote: bvbhu-zmk-qmk-rgb-matrix
       revision: main
       path: modules/rgb-matrix
   self:
