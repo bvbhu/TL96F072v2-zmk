@@ -1,47 +1,45 @@
-# TL96F072v2 ZMK 固件 & QMK RGB Matrix
+# TL96F072v2 ZMK Firmware
 
-本项目全部使用 AI 编写。
+适用于 **洛塔洛塔洛** 制作的 **TL96F072v2** PCB（STM32F072）的zmk固件。
 
-适用于 **洛塔洛塔洛** 制作的 **TL96F072v2** PCB 的 ZMK 固件，复刻了 QMK RGB Matrix，编写了一些自定义行为。
+由于RAM空间限制，比较容易出现卡死等问题，放弃维护。
+
+本仓库主要作为 [zmk-qmk-rgb-matrix](https://github.com/bvbhu/zmk-qmk-rgb-matrix/tree/main) 模块的测试键盘。
+
+键位图推荐使用 [ZMK Keymap Editor](https://nickcoutsos.github.io/keymap-editor/) 查看。
+
+固件使用 [GitHub Actions](https://github.com/bvbhu/TL96F072v2-zmk/actions) 自动构建，使用 QMK Toolbox 刷入。
 
 <img width="480" height="181" alt="键盘图片1" src="https://github.com/user-attachments/assets/43bbfab6-0a9f-4a59-9983-aa52a0bc6fb5" />
 <img width="480" height="187" alt="键盘图片2" src="https://github.com/user-attachments/assets/d82f63c4-31b0-4a66-9504-26c5ff799f2e" />
 
----
+## RGB Matrix
 
-### RGB Matrix
+使用[zmk-qmk-rgb-matrix](https://github.com/bvbhu/zmk-qmk-rgb-matrix/tree/main) 模块提供的自定义 RGB 控制器取代 ZMK 内置 `rgb_underglow`，复刻 QMK RGB Matrix，实现了绝大部分多数功能。
 
-使用自定义 RGB 控制器取代 ZMK 内置 `rgb_underglow`，复刻 QMK RGB Matrix。支持全部灯效，状态自动保存至 flash，空闲可自动熄灯。RGB Matrix 实现由 [zmk-qmk-rgb-matrix](https://github.com/bvbhu/zmk-qmk-rgb-matrix/tree/main)模块提供，键盘仓库仅需通过 Kconfig 和 `keymap.c` 配置参数与 LED 布局。
+| 文件 | 说明 |
+|------|------|
+| `config/west.yml` | west 清单，从 `bvbhu/zmk-qmk-rgb-matrix` 拉取模块到 `modules/rgb-matrix` |
+| `config/tl96.conf` | 灯效参数：LED 数量/行/列、灯效中心、亮度上限、空闲熄灯、启用灯效列表 |
+| `config/tl96.keymap.c` | LED 布局（`g_led_config`）及状态指示灯回调（`rgb_matrix_indicators_advanced_user`） |
+| `boards/talo/tl96/tl96_defconfig` | 选择自定义驱动 `WS2812_GPIO_STM32`，禁用内置 `RGB_UNDERGLOW` |
 
----
+### ws8212 bit-bang 驱动
 
-键位图推荐使用 [ZMK Keymap Editor](https://nickcoutsos.github.io/keymap-editor/) 查看。
+| 文件 | 说明 |
+|------|------|
+| `drivers/led_strip/ws2812_gpio_stm32.c` | 基于 GPIO BSRR 寄存器的 bit-bang 时序驱动 |
+| `dts/bindings/led_strip/bvbhu,ws2812-gpio-stm32.yaml` | 设备树绑定（`chain-length`、`gpios`、`color-mapping`、`reset-delay`） |
+| `boards/talo/tl96/tl96.dts` | `led_strip` 节点定义：PB12、96 颗 LED、GRB 色序 |
+| `Kconfig` | 声明 `WS2812_GPIO_STM32` 选项 |
 
----
+### 自定义behavior
 
-## 自定义行为
-
-使用 `zmk,behavior-bvbhu` 自定义行为驱动，配合统一事件监听器实现以下功能：
-
-- **`&bvbhu 0` — Lead 序列匹配**：由 Combo（PGDN+PGUP+PSCR）触发，激活后拦截所有按键构建序列，支持前缀匹配，全数字序列自动依次输出；按下非字母数字键即终止 Lead（该键被拦截、不产生输出），按下首个字符键后 2s 无输入超时终止。预设序列见 `src/behaviors/behavior_bvbhu.c` 的 `lead_entries`。
-- **`&bvbhu 2` — 解锁序列**：由 Combo（KP_N0+KP_DOT）触发，依次输出 空格 → 300ms → `132445`。
-- **`&bvbhu 3` — 锁定序列**：由 Combo（KP_N1+KP_N2+KP_N3）触发，依次输出 `Win+X → U → S`。
-- **`&bvbhu_right_space` — 右空格**：按住临时激活层 1（Lower），释放后恢复；单击空格、双击回车、三击退格回车、四击 `"- "` + Ctrl+V。
-- **`&f13` — 状态复位 / Alt+F4**：tap-dance 行为，单击切回 0 层并执行 `&bvbhu 1`（关 CapsLock/ScrollLock、开 NumLock），双击发送 Alt+F4。
-- **`&kp RG(P)` — 优化 Win+P 投影**：延迟 2s 释放 Win 键。
-
-### Combo 功能
-
-| Combo | 键位 | 行为 |
-|-------|------|------|
-| 解锁 | KP_N0 + KP_DOT（85+86） | `&bvbhu 2`：空格 + 300ms + `132445` |
-| 锁定 | KP_N1 + KP_N2 + KP_N3（70+71+72） | `&bvbhu 3`：`Win+X` → `U` → `S` |
-| Lead | PGDN + PGUP + PSCR（22+23+24） | `&bvbhu 0`：激活 Lead 序列模式 |
-
-> 解锁/锁定 Combo 使用自定义行为而非 `zmk,behavior-macro`：ZMK 的 combo→宏 组合在 combo 释放时会卡死系统 workqueue（[issue #2356](https://github.com/zmkfirmware/zmk/issues/2356)、[issue #3100](https://github.com/zmkfirmware/zmk/issues/3100)），表现为 USB 保持连接但按键无输出。自定义行为经 `k_work_delayable` 异步分步执行，combo 释放不影响序列继续。
-
----
-
-## 构建与刷写
-
-使用 GitHub Actions 自动构建，使用 QMK Toolbox 刷入。
+| 文件 | 说明 |
+|------|------|
+| `src/behaviors/behavior_bvbhu.c` | 行为实现（Lead 序列、解锁/锁定、右空格多态、Win+P 延迟） |
+| `src/behaviors/behavior_bvbhu.h` | 接口定义、键码宏、参数常量 |
+| `dts/bindings/behaviors/zmk,behavior-bvbhu.yaml` | 设备树绑定（`#binding-cells = <1>`，子类型编号） |
+| `dts/bindings/vendor-prefixes.txt` | 注册 `bvbhu` 前缀 |
+| `config/bvbhu.dtsi` | 行为实例 `&bvbhu` |
+| `config/tl96.keymap` | 键位映射，使用 `&bvbhu`、combo、macro 等引用 |
